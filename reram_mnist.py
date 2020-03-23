@@ -14,18 +14,36 @@ from datasets.mnist import getmnist, NUM_TRAIN
 from torchvision import datasets, transforms
 
 from helper import accuracy, AverageMeter, save_checkpoint
+from module.layer1 import crxb_Conv2d, crxb_Linear
 # import pydevd_pycharm
 # pydevd_pycharm.settrace('0.0.0.0', port=12346, stdoutToServer=True, stderrToServer=True)
 
 
 class Net(nn.Module):
-    def __init__(self):
+    def __init__(self, crxb_size, gmin, gmax, gwire, gload, vdd, ir_drop, freq, temp, device, scaler_dw, enable_noise,
+                 enable_SAF, enable_ec_SAF, quantize):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 20, 5, 1)
-        self.conv2 = nn.Conv2d(20, 50, 5, 1)
-        self.fc1 = nn.Linear(4*4*50, 500)
-        self.fc2 = nn.Linear(500, 10)
+        # self.conv1 = nn.Conv2d(1, 20, 5, 1)
+        # self.conv2 = nn.Conv2d(20, 50, 5, 1)
+        # self.fc1 = nn.Linear(4*4*50, 500)
+        # self.fc2 = nn.Linear(500, 10)
+        self.conv1 = crxb_Conv2d(1, 20, kernel_size=5, crxb_size=crxb_size, scaler_dw=scaler_dw,
+                                 gwire=gwire, gload=gload, gmax=gmax, gmin=gmin, vdd=vdd, freq=freq, temp=temp,
+                                 enable_SAF=enable_SAF, enable_ec_SAF=enable_ec_SAF,
+                                 enable_noise=enable_noise, ir_drop=ir_drop, device=device, quantize=quantize)
+        self.conv2 = crxb_Conv2d(20, 50, kernel_size=5, crxb_size=crxb_size, scaler_dw=scaler_dw,
+                                 gwire=gwire, gload=gload, gmax=gmax, gmin=gmin, vdd=vdd, freq=freq, temp=temp,
+                                 enable_SAF=enable_SAF, enable_ec_SAF=enable_ec_SAF,
+                                 enable_noise=enable_noise, ir_drop=ir_drop, device=device, quantize=quantize)
         self.conv2_drop = nn.Dropout2d()
+        self.fc1 = crxb_Linear(4*4*50, 500, crxb_size=crxb_size, scaler_dw=scaler_dw,
+                               gmax=gmax, gmin=gmin, gwire=gwire, gload=gload, freq=freq, temp=temp,
+                               vdd=vdd, ir_drop=ir_drop, device=device, enable_noise=enable_noise,
+                               enable_ec_SAF=enable_ec_SAF, enable_SAF=enable_SAF, quantize=quantize)
+        self.fc2 = crxb_Linear(500, 10, crxb_size=crxb_size, scaler_dw=scaler_dw,
+                               gmax=gmax, gmin=gmin, gwire=gwire, gload=gload, freq=freq, temp=temp,
+                               vdd=vdd, ir_drop=ir_drop, device=device, enable_noise=enable_noise,
+                               enable_ec_SAF=enable_ec_SAF, enable_SAF=enable_SAF, quantize=quantize)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -177,8 +195,6 @@ def main():
                         metavar='W', help='weight decay (default: 5e-4)')
     # scheduler
     parser.add_argument('--scheduler', type=str, default="None", help="scheduler MultiStepLR/None/ReduceLROnPlateau")
-    parser.add_argument('--schedule', type=int, nargs='+', default=[150, 225],
-                        help='Decrease learning rate at these epochs.')
     parser.add_argument('--gamma', type=float, default=0.1, help='LR is multiplied by gamma on schedule.')
     parser.add_argument('--decreasing-lr', default='10', help='decreasing strategy')
 
@@ -190,6 +206,39 @@ def main():
     parser.add_argument('--save-model', action='store_true', default=True,
                         help='For Saving the current Model')
     parser.add_argument('--checkpoint-path', type=str, default="", help="save model path.")
+
+    # crossbar cfg
+    parser.add_argument('--Quantized', action='store_true', default=False,
+                        help='use quantized model')
+    parser.add_argument('--qbit', type=int, default=8, help='activation/weight qbit')
+
+    parser.add_argument('--crxb-size', type=int, default=64, help='corssbar size')
+    parser.add_argument('--vdd', type=float, default=3.3, help='supply voltage')
+    parser.add_argument('--gwire', type=float, default=0.0357,
+                        help='wire conductacne')
+    parser.add_argument('--gload', type=float, default=0.25,
+                        help='load conductance')
+    parser.add_argument('--gmax', type=float, default=0.000333,
+                        help='maximum cell conductance')
+    parser.add_argument('--gmin', type=float, default=0.000000333,
+                        help='minimum cell conductance')
+    parser.add_argument('--ir-drop', action='store_true', default=False,
+                        help='switch to turn on ir drop analysis')
+    parser.add_argument('--scaler-dw', type=float, default=1,
+                        help='scaler to compress the conductance')
+    parser.add_argument('--test', action='store_true', default=False,
+                        help='switch to turn inference mode')
+    parser.add_argument('--enable_noise', action='store_true', default=False,
+                        help='switch to turn on noise analysis')
+    parser.add_argument('--enable_SAF', action='store_true', default=False,
+                        help='switch to turn on SAF analysis')
+    parser.add_argument('--enable_ec-SAF', action='store_true', default=False,
+                        help='switch to turn on SAF error correction')
+    parser.add_argument('--freq', type=float, default=10e6,
+                        help='scaler to compress the conductance')
+    parser.add_argument('--temp', type=float, default=300,
+                        help='scaler to compress the conductance')
+
     args = parser.parse_args()
     print("+++", args)
 
@@ -200,7 +249,10 @@ def main():
     device = torch.device("cuda" if use_cuda else "cpu")
     print(device)
 
-    net = Net().to(device)
+    net = Net(crxb_size=args.crxb_size, gmax=args.gmax, gmin=args.gmin, gwire=args.gwire, gload=args.gload,
+                vdd=args.vdd, ir_drop=args.ir_drop, device=device, scaler_dw=args.scaler_dw, freq=args.freq, temp=args.temp,
+                enable_SAF=args.enable_SAF, enable_noise=args.enable_noise, enable_ec_SAF=args.enable_ec_SAF, quantize=args.qbit).to(device)
+
 
     if torch.cuda.device_count() > 1:
         print("Let's use", torch.cuda.device_count(), "GPUs!")
