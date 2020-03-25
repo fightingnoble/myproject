@@ -20,33 +20,20 @@ from module.layer1 import crxb_Conv2d, crxb_Linear
 
 
 class Net(nn.Module):
-    def __init__(self, crxb_size, gmin, gmax, gwire, gload, vdd, ir_drop, freq, temp, device, scaler_dw, enable_noise,
-                 enable_SAF, enable_ec_SAF, quantize):
+    def __init__(self, **crxb_cfg):
         super(Net, self).__init__()
         # self.conv1 = nn.Conv2d(1, 20, 5, 1)
         # self.conv2 = nn.Conv2d(20, 50, 5, 1)
         # self.fc1 = nn.Linear(4*4*50, 500)
         # self.fc2 = nn.Linear(500, 10)
-        self.conv1 = crxb_Conv2d(1, 20, kernel_size=5, crxb_size=crxb_size, scaler_dw=scaler_dw,
-                                 gwire=gwire, gload=gload, gmax=gmax, gmin=gmin, vdd=vdd, freq=freq, temp=temp,
-                                 enable_SAF=enable_SAF, enable_ec_SAF=enable_ec_SAF,
-                                 enable_noise=enable_noise, ir_drop=ir_drop, device=device, quantize=quantize)
-        self.conv2 = crxb_Conv2d(20, 50, kernel_size=5, crxb_size=crxb_size, scaler_dw=scaler_dw,
-                                 gwire=gwire, gload=gload, gmax=gmax, gmin=gmin, vdd=vdd, freq=freq, temp=temp,
-                                 enable_SAF=enable_SAF, enable_ec_SAF=enable_ec_SAF,
-                                 enable_noise=enable_noise, ir_drop=ir_drop, device=device, quantize=quantize)
+        self.conv1 = crxb_Conv2d(1, 20, kernel_size=5, is_first_layer=True, **crxb_cfg)
+        self.conv2 = crxb_Conv2d(20, 50, kernel_size=5, **crxb_cfg)
         self.conv2_drop = nn.Dropout2d()
-        self.fc1 = crxb_Linear(4*4*50, 500, crxb_size=crxb_size, scaler_dw=scaler_dw,
-                               gmax=gmax, gmin=gmin, gwire=gwire, gload=gload, freq=freq, temp=temp,
-                               vdd=vdd, ir_drop=ir_drop, device=device, enable_noise=enable_noise,
-                               enable_ec_SAF=enable_ec_SAF, enable_SAF=enable_SAF, quantize=quantize)
-        self.fc2 = crxb_Linear(500, 10, crxb_size=crxb_size, scaler_dw=scaler_dw,
-                               gmax=gmax, gmin=gmin, gwire=gwire, gload=gload, freq=freq, temp=temp,
-                               vdd=vdd, ir_drop=ir_drop, device=device, enable_noise=enable_noise,
-                               enable_ec_SAF=enable_ec_SAF, enable_SAF=enable_SAF, quantize=quantize)
+        self.fc1 = crxb_Linear(4*4*50, 500, **crxb_cfg)
+        self.fc2 = crxb_Linear(500, 10, is_last_layer=True, **crxb_cfg)
 
     def forward(self, x):
-        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv1(x)) # leaky_relu
         x = F.max_pool2d(x, 2, 2)
         x = F.relu(self.conv2(x))
         x = self.conv2_drop(x)
@@ -210,7 +197,7 @@ def main():
     # crossbar cfg
     parser.add_argument('--Quantized', action='store_true', default=False,
                         help='use quantized model')
-    parser.add_argument('--qbit', type=int, default=8, help='activation/weight qbit')
+    parser.add_argument('--qbit', default='8', help='activation/weight qbit')
 
     parser.add_argument('--crxb-size', type=int, default=64, help='corssbar size')
     parser.add_argument('--vdd', type=float, default=3.3, help='supply voltage')
@@ -249,9 +236,15 @@ def main():
     device = torch.device("cuda" if use_cuda else "cpu")
     print(device)
 
-    net = Net(crxb_size=args.crxb_size, gmax=args.gmax, gmin=args.gmin, gwire=args.gwire, gload=args.gload,
-                vdd=args.vdd, ir_drop=args.ir_drop, device=device, scaler_dw=args.scaler_dw, freq=args.freq, temp=args.temp,
-                enable_SAF=args.enable_SAF, enable_noise=args.enable_noise, enable_ec_SAF=args.enable_ec_SAF, quantize=args.qbit).to(device)
+    qbit_list = list(map(int, args.qbit.split(',')))
+    crxb_cfg = {'ir_drop': args.ir_drop, 'device': device,
+                'gmax': args.gmax, 'gmin': args.gmin, 'gwire': args.gwire, 'gload': args.gload,
+                'input_qbit': qbit_list[0], 'weight_qbit': qbit_list[0], 'activation_qbit': qbit_list[0],
+                'vdd': args.vdd, 'enable_noise': args.enable_noise,
+                'freq': args.freq, 'temp': args.temp, 'crxb_size': args.crxb_size,
+                'enable_SAF': args.enable_SAF, 'enable_ec_SAF': args.enable_ec_SAF}
+
+    net = Net(**crxb_cfg).to(device)
 
 
     if torch.cuda.device_count() > 1:
@@ -330,6 +323,16 @@ def main():
     if not args.evaluate:
         print("!!train!!")
         run(args, net, device, trainloader, testloader, scheduler, optimizer)
+        PATH = args.checkpoint_path + '_' + args.model_type + '_' + str(args.model_structure) + '_final.pth'
+        torch.save({
+            'epoch': args.epochs + 1,
+            'arch': args.model_type,
+            'state_dict': net.state_dict(),
+            'best_prec1': best_prec1,
+            'optimizer': optimizer.state_dict()
+        }, PATH)
+        print('Finished Training')
+
     print("!!test!!")
     test(args, net, device, testloader)
     t_e = time.monotonic()
@@ -338,15 +341,10 @@ def main():
     h, m = divmod(m, 60)
     print("%d:%02d:%02d" % (h, m, s))
 
-    PATH = args.checkpoint_path + '_' + args.model_type + '_' + str(args.model_structure) + '_final.pth'
-    torch.save({
-        'epoch': args.epochs + 1,
-        'arch': args.model_type,
-        'state_dict': net.state_dict(),
-        'best_prec1': best_prec1,
-        'optimizer': optimizer.state_dict()
-    }, PATH)
-    print('Finished Training')
-
 if __name__ == '__main__':
     main()
+
+# 2020/03/25: divide the quatization bits into three class, IA, W, MA.
+# format the physical parameter dict: crxb_cfg
+# add layer number flag: is_first_layer, is_last_layer
+# 2020/03/25: add layer number flag: is_first_layer, is_last_layer

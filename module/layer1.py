@@ -39,12 +39,32 @@ class crxb_Conv2d(nn.Conv2d):
         enable_ec_SAF(bool): switch to enable SAF error correction.
     """
 
-    def __init__(self, in_channels, out_channels, kernel_size, ir_drop, device, gmax, gmin, gwire,
-                 gload, scaler_dw=1, vdd=3.3, stride=1, padding=0, dilation=1, enable_noise=True,
-                 freq=10e6, temp=300, groups=1, bias=True, crxb_size=64, quantize=8, enable_SAF=False,
-                 enable_ec_SAF=False):
+    def __init__(self, in_channels, out_channels, kernel_size,
+                 ir_drop, device, gmax, gmin, gwire, gload,
+                 stride=1, padding=0, dilation=1, groups=1,
+                 bias=True, input_qbit=32, weight_qbit=32, activation_qbit=32, scaler_dw=1,
+                 is_first_layer=False, is_last_layer=False,
+                 vdd=3.3, enable_noise=True, freq=10e6, temp=300, crxb_size=64,
+                 enable_SAF=False, enable_ec_SAF=False):
+
         super(crxb_Conv2d, self).__init__(in_channels, out_channels, kernel_size,
                                           stride, padding, dilation, groups, bias)
+        self.input_qbit = input_qbit
+        self.weight_qbit = weight_qbit
+        self.activation_qbit = activation_qbit
+        self.scaler_dw = scaler_dw
+
+        self.is_first_layer = torch.tensor([int(is_first_layer)])
+        self.is_last_layer = torch.tensor([int(is_last_layer)])
+        self.register_buffer('delta_in_sum', torch.zeros(1))
+        self.register_buffer('delta_out_sum', torch.zeros(1))
+        self.register_buffer('counter', torch.zeros(1))
+
+        self.delta_x = self.delta_w = None
+        self.delta_i = self.delta_y = None
+        self.h_lvl_ma = 2 ** (input_qbit - 1) - 1 if self.is_first_layer.data else 2 ** (8 - 1) - 1
+        self.h_lvl_w = 2 ** (weight_qbit - 1) - 1
+        self.h_lvl_ia = 2 ** (activation_qbit - 1) - 1 if self.is_last_layer.data else 2 ** (8 - 1) - 1
 
         assert self.groups == 1, "currently not support grouped convolution for custom conv"
 
@@ -56,39 +76,33 @@ class crxb_Conv2d(nn.Conv2d):
         self.enable_ec_SAF = enable_ec_SAF
 
         self.register_buffer('nchout_index', torch.arange(self.out_channels))
-        weight_flatten = self.weight.view(self.out_channels, -1)
-        self.crxb_row, self.crxb_row_pads = self.num_pad(
-            weight_flatten.shape[1], self.crxb_size)
-        self.crxb_col, self.crxb_col_pads = self.num_pad(
-            weight_flatten.shape[0], self.crxb_size)
+        weight_flatten_rows = self.in_channels * torch.cumprod(torch.tensor(self.kernel_size), 0)[-1].item()
+        weight_flatten_cols = self.out_channels
+        self.crxb_row, self.crxb_row_pads = self.num_pad(weight_flatten_rows, self.crxb_size)
+        self.crxb_col, self.crxb_col_pads = self.num_pad(weight_flatten_cols, self.crxb_size)
+        # p3d = (0, 1, 2, 1, 3, 3) # pad by (0, 1), (2, 1), and (3, 3)
         self.h_out = None
         self.w_out = None
-        self.w_pad = (0, self.crxb_row_pads, 0, self.crxb_col_pads)
-        self.input_pad = (0, 0, 0, self.crxb_row_pads)
-        weight_padded = F.pad(weight_flatten, self.w_pad,
-                              mode='constant', value=0)
-        weight_crxb = weight_padded.view(self.crxb_col, self.crxb_size,
-                                         self.crxb_row, self.crxb_size).transpose(1, 2)
+        self.w_pad = [0, self.crxb_row_pads, 0, self.crxb_col_pads]
+        self.input_pad = [0, 0, 0, self.crxb_row_pads]
+        weight_crxb_shape = torch.Size((self.crxb_col, self.crxb_row,
+                                        self.crxb_size, self.crxb_size))
 
         ################# Hardware conversion ##############################
         # weight and input levels
-        self.n_lvl = 2 ** quantize
-        self.h_lvl = (self.n_lvl - 2) / 2
+        self.n_lvl_g = 2 ** weight_qbit
+        self.h_lvl_g = (self.n_lvl_g - 2)/2
         # ReRAM cells
         self.Gmax = gmax  # max conductance
         self.Gmin = gmin  # min conductance
         self.delta_g = (self.Gmax - self.Gmin) / (2 ** 7)  # conductance step
         self.w2g = w2g(self.delta_g, Gmin=self.Gmin, G_SA0=self.Gmax,
-                       G_SA1=self.Gmin, weight_shape=weight_crxb.shape, enable_SAF=enable_SAF)
+                       G_SA1=self.Gmin, weight_shape=weight_crxb_shape, enable_SAF=enable_SAF)
         self.Gwire = gwire
         self.Gload = gload
         # DAC
         self.Vdd = vdd  # unit: volt
-        self.delta_v = self.Vdd / (self.n_lvl - 1)
-        self.register_buffer('delta_in_sum', torch.zeros(1))
-        self.register_buffer('delta_out_sum', torch.zeros(1))
-        self.register_buffer('counter', torch.zeros(1))
-        self.scaler_dw = scaler_dw
+        self.delta_v = self.Vdd / (self.n_lvl_g - 1)
 
         ################ Stochastic Conductance Noise setup #########################
         # parameters setup
@@ -110,16 +124,16 @@ class crxb_Conv2d(nn.Conv2d):
     def forward(self, input):
         # 1. input data and weight quantization
         with torch.no_grad():
-            self.delta_w = self.weight.abs().max() / self.h_lvl * self.scaler_dw
+            self.delta_w = self.weight.abs().max() / self.h_lvl_w * self.scaler_dw
             if self.training:
                 self.counter.data += 1
-                self.delta_x = input.abs().max() / self.h_lvl
+                self.delta_x = input.abs().max() / self.h_lvl_ma
                 self.delta_in_sum.data += self.delta_x
             else:
                 self.delta_x = self.delta_in_sum.data / self.counter.data
 
-        input_clip = F.hardtanh(input, min_val=-self.h_lvl * self.delta_x.item(),
-                                max_val=self.h_lvl * self.delta_x.item())
+        input_clip = F.hardtanh(input, min_val=-self.h_lvl_ma * self.delta_x.item(),
+                                max_val=self.h_lvl_ma * self.delta_x.item())
         input_quan = quantize_input(
             input_clip, self.delta_x) * self.delta_v  # convert to voltage
 
@@ -215,15 +229,15 @@ class crxb_Conv2d(nn.Conv2d):
         # 3. perform ADC operation (i.e., current to digital conversion)
         with torch.no_grad():
             if self.training:
-                self.delta_i = output_crxb.abs().max() / (self.h_lvl)
+                self.delta_i = output_crxb.abs().max() / self.h_lvl_ia
                 self.delta_out_sum.data += self.delta_i
             else:
                 self.delta_i = self.delta_out_sum.data / self.counter.data
             self.delta_y = self.delta_w * self.delta_x * \
                            self.delta_i / (self.delta_v * self.delta_g)
         #         print('adc LSB ration:', self.delta_i/self.max_i_LSB)
-        output_clip = F.hardtanh(output_crxb, min_val=-self.h_lvl * self.delta_i.item(),
-                                 max_val=self.h_lvl * self.delta_i.item())
+        output_clip = F.hardtanh(output_crxb, min_val=-self.h_lvl_ia * self.delta_i.item(),
+                                 max_val=self.h_lvl_ia * self.delta_i.item())
         output_adc = adc(output_clip, self.delta_i, self.delta_y)
 
         if self.w2g.enable_SAF:
@@ -278,10 +292,31 @@ class crxb_Linear(nn.Linear):
         enable_ec_SAF(bool): switch to enable SAF error correction.
     """
 
-    def __init__(self, in_features, out_features, ir_drop, device, gmax, gmin, gwire, gload, freq=10e6,
-                 vdd=3.3, scaler_dw=1, temp=300, bias=True, crxb_size=64, quantize=8, enable_ec_SAF=False,
-                 enable_noise=True, enable_SAF=False):
+    def __init__(self, in_features, out_features,
+                 ir_drop, device, gmax, gmin, gwire, gload,
+                 bias=True, input_qbit=32, weight_qbit=32, activation_qbit=32, scaler_dw=1,
+                 is_first_layer=False, is_last_layer=False,
+                 vdd=3.3, enable_noise=True, freq=10e6, temp=300, crxb_size=64,
+                 enable_SAF=False, enable_ec_SAF=False):
         super(crxb_Linear, self).__init__(in_features, out_features, bias)
+        self.input_qbit = input_qbit
+        self.weight_qbit = weight_qbit
+        self.activation_qbit = activation_qbit
+        self.scaler_dw = scaler_dw
+
+        # self.register_buffer('is_first_layer', torch.tensor([int(is_first_layer)]))
+        # self.register_buffer('is_last_layer', torch.tensor([int(is_last_layer)]))
+        self.is_first_layer = torch.tensor([int(is_first_layer)])
+        self.is_last_layer = torch.tensor([int(is_last_layer)])
+        self.register_buffer('delta_in_sum', torch.zeros(1))
+        self.register_buffer('delta_out_sum', torch.zeros(1))
+        self.register_buffer('counter', torch.zeros(1))
+
+        self.delta_x = self.delta_w = None
+        self.delta_i = self.delta_y = None
+        self.h_lvl_ma = 2 ** (input_qbit - 1) - 1 if self.is_first_layer.data else 2 ** (8 - 1) - 1
+        self.h_lvl_w = 2 ** (weight_qbit - 1) - 1
+        self.h_lvl_ia = 2 ** (activation_qbit - 1) - 1 if self.is_last_layer.data else 2 ** (8 - 1) - 1
 
         self.ir_drop = ir_drop
         self.device = device
@@ -290,36 +325,29 @@ class crxb_Linear(nn.Linear):
         self.enable_ec_SAF = enable_ec_SAF
 
         self.register_buffer('out_index', torch.arange(out_features))
-        self.crxb_row, self.crxb_row_pads = self.num_pad(
-            self.weight.shape[1], self.crxb_size)
-        self.crxb_col, self.crxb_col_pads = self.num_pad(
-            self.weight.shape[0], self.crxb_size)
-        self.w_pad = (0, self.crxb_row_pads, 0, self.crxb_col_pads)
-        self.input_pad = (0, self.crxb_row_pads)
-        weight_padded = F.pad(self.weight, self.w_pad,
-                              mode='constant', value=0)
-        weight_crxb = weight_padded.view(self.crxb_col, self.crxb_size,
-                                         self.crxb_row, self.crxb_size).transpose(1, 2)
+        self.crxb_row, self.crxb_row_pads = self.num_pad(self.weight.shape[1], self.crxb_size)
+        self.crxb_col, self.crxb_col_pads = self.num_pad(self.weight.shape[0], self.crxb_size)
+        # p3d = (0, 1, 2, 1, 3, 3) # pad by (0, 1), (2, 1), and (3, 3) for last 1, 2, 3 dimension
+        self.w_pad = [0, self.crxb_row_pads, 0, self.crxb_col_pads]
+        self.input_pad = [0, self.crxb_row_pads]
+        weight_crxb_shape = torch.Size((self.crxb_col, self.crxb_row,
+                                        self.crxb_size, self.crxb_size))
 
         ################# Hardware conversion ##############################
         # weight and input levels
-        self.n_lvl = 2 ** quantize
-        self.h_lvl = (self.n_lvl - 2) / 2
+        self.n_lvl_g = 2 ** weight_qbit
+        self.h_lvl_g = (self.n_lvl_g - 2)/2
         # ReRAM cells
         self.Gmax = gmax  # max conductance
         self.Gmin = gmin  # min conductance
         self.delta_g = (self.Gmax - self.Gmin) / (2 ** 7)  # conductance step
         self.w2g = w2g(self.delta_g, Gmin=self.Gmin, G_SA0=self.Gmax,
-                       G_SA1=self.Gmin, weight_shape=weight_crxb.shape, enable_SAF=enable_SAF)
+                       G_SA1=self.Gmin, weight_shape=weight_crxb_shape, enable_SAF=enable_SAF)
         self.Gwire = gwire
         self.Gload = gload
         # DAC
-        self.scaler_dw = scaler_dw
         self.Vdd = vdd  # unit: volt
-        self.delta_v = self.Vdd / (self.n_lvl - 1)
-        self.register_buffer('delta_in_sum', torch.zeros(1))
-        self.register_buffer('delta_out_sum', torch.zeros(1))
-        self.register_buffer('counter', torch.zeros(1))
+        self.delta_v = self.Vdd / (self.n_lvl_g - 1)
 
         ################ Stochastic Conductance Noise setup #########################
         # parameters setup
@@ -341,16 +369,16 @@ class crxb_Linear(nn.Linear):
     def forward(self, input):
         # 1. input data and weight quantization
         with torch.no_grad():
-            self.delta_w = self.weight.abs().max() / self.h_lvl * self.scaler_dw
+            self.delta_w = self.weight.abs().max() / self.h_lvl_w * self.scaler_dw
             if self.training:
                 self.counter.data += 1
-                self.delta_x = input.abs().max() / self.h_lvl
+                self.delta_x = input.abs().max() / self.h_lvl_ma
                 self.delta_in_sum.data += self.delta_x
             else:
                 self.delta_x = self.delta_in_sum.data / self.counter.data
 
-        input_clip = F.hardtanh(input, min_val=-self.h_lvl * self.delta_x.item(),
-                                max_val=self.h_lvl * self.delta_x.item())
+        input_clip = F.hardtanh(input, min_val=-self.h_lvl_ma * self.delta_x.item(),
+                                max_val=self.h_lvl_ma * self.delta_x.item())
         input_quan = quantize_input(
             input_clip, self.delta_x) * self.delta_v  # convert to voltage
 
@@ -441,15 +469,15 @@ class crxb_Linear(nn.Linear):
         # 3. perform ADC operation (i.e., current to digital conversion)
         with torch.no_grad():
             if self.training:
-                self.delta_i = output_crxb.abs().max() / (self.h_lvl)
+                self.delta_i = output_crxb.abs().max() / (self.h_lvl_ia)
                 self.delta_out_sum.data += self.delta_i
             else:
                 self.delta_i = self.delta_out_sum.data / self.counter.data
             self.delta_y = self.delta_w * self.delta_x * \
                            self.delta_i / (self.delta_v * self.delta_g)
         #         print('adc LSB ration:', self.delta_i/self.max_i_LSB)
-        output_clip = F.hardtanh(output_crxb, min_val=-self.h_lvl * self.delta_i.item(),
-                                 max_val=self.h_lvl * self.delta_i.item())
+        output_clip = F.hardtanh(output_crxb, min_val=-self.h_lvl_ia * self.delta_i.item(),
+                                 max_val=self.h_lvl_ia * self.delta_i.item())
         output_adc = adc(output_clip, self.delta_i, self.delta_y)
 
         if self.w2g.enable_SAF:
@@ -476,3 +504,5 @@ class crxb_Linear(nn.Linear):
 
 # Change list:
 # 2020/03/15: fixed the bias bug
+# 2020/03/25: divide the quatization bits into three class, IA, W, MA.
+# 2020/03/25: add layer number flag: is_first_layer, is_last_layer

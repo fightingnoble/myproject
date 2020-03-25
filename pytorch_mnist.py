@@ -278,6 +278,16 @@ def main():
     if not args.evaluate:
         print("!!train!!")
         run(args, net, device, trainloader, testloader, scheduler, optimizer)
+        PATH = args.checkpoint_path + '_' + args.model_type + '_' + str(args.model_structure) + '_final.pth'
+        torch.save({
+            'epoch': args.epochs + 1,
+            'arch': args.model_type,
+            'state_dict': net.state_dict(),
+            'best_prec1': best_prec1,
+            'optimizer': optimizer.state_dict()
+        }, PATH)
+        print('Finished Training')
+
     print("!!test!!")
     test(args, net, device, testloader)
     t_e = time.monotonic()
@@ -285,16 +295,6 @@ def main():
     m, s = divmod(t_e-t_s, 60)
     h, m = divmod(m, 60)
     print("%d:%02d:%02d" % (h, m, s))
-
-    PATH = args.checkpoint_path + '_' + args.model_type + '_' + str(args.model_structure) + '_final.pth'
-    torch.save({
-        'epoch': args.epochs + 1,
-        'arch': args.model_type,
-        'state_dict': net.state_dict(),
-        'best_prec1': best_prec1,
-        'optimizer': optimizer.state_dict()
-    }, PATH)
-    print('Finished Training')
 
 if __name__ == '__main__':
     main()
