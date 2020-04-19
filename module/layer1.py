@@ -11,7 +11,7 @@ from .w2g import w2g
 quantize_input = _quantize_dac.apply
 quantize_weight = _quantize_dac.apply
 adc = _adc.apply
-
+noise_amp = 0.12
 
 class crxb_Conv2d(nn.Conv2d):
     """
@@ -90,19 +90,19 @@ class crxb_Conv2d(nn.Conv2d):
 
         ################# Hardware conversion ##############################
         # weight and input levels
-        self.n_lvl_g = 2 ** weight_qbit
-        self.h_lvl_g = (self.n_lvl_g - 2)/2
+        self.n_lvl_v = 2 ** input_qbit
+        self.h_lvl_g = 2 ** (weight_qbit-1)
         # ReRAM cells
         self.Gmax = gmax  # max conductance
         self.Gmin = gmin  # min conductance
-        self.delta_g = (self.Gmax - self.Gmin) / (2 ** 7)  # conductance step
+        self.delta_g = (self.Gmax - self.Gmin) / self.h_lvl_g  # conductance step
         self.w2g = w2g(self.delta_g, Gmin=self.Gmin, G_SA0=self.Gmax,
                        G_SA1=self.Gmin, weight_shape=weight_crxb_shape, enable_SAF=enable_SAF)
         self.Gwire = gwire
         self.Gload = gload
         # DAC
         self.Vdd = vdd  # unit: volt
-        self.delta_v = self.Vdd / (self.n_lvl_g - 1)
+        self.delta_v = self.Vdd / (self.n_lvl_v - 1)
 
         ################ Stochastic Conductance Noise setup #########################
         # parameters setup
@@ -134,10 +134,15 @@ class crxb_Conv2d(nn.Conv2d):
 
         input_clip = F.hardtanh(input, min_val=-self.h_lvl_ma * self.delta_x.item(),
                                 max_val=self.h_lvl_ma * self.delta_x.item())
-        input_quan = quantize_input(
-            input_clip, self.delta_x) * self.delta_v  # convert to voltage
+        if self.delta_x == 0:
+            input_quan = input
+        else:
+            input_quan = quantize_input(input_clip, self.delta_x) * self.delta_v  # convert to voltage
 
-        weight_quan = quantize_weight(self.weight, self.delta_w)
+        if self.delta_w == 0:
+            self.weight_quan = self.weight
+        else:
+            self.weight_quan = quantize_weight(self.weight, self.delta_w)
 
         # 2. Perform the computation between input voltage and weight conductance
         if self.h_out is None and self.w_out is None:
@@ -150,7 +155,7 @@ class crxb_Conv2d(nn.Conv2d):
         input_unfold = F.unfold(input_quan, kernel_size=self.kernel_size[0],
                                 dilation=self.dilation, padding=self.padding,
                                 stride=self.stride)
-        weight_flatten = weight_quan.view(self.out_channels, -1)
+        weight_flatten = self.weight_quan.view(self.out_channels, -1)
 
         # 2.2. add paddings
         weight_padded = F.pad(weight_flatten, self.w_pad,
@@ -169,30 +174,34 @@ class crxb_Conv2d(nn.Conv2d):
 
         # this block is for introducing stochastic noise into ReRAM conductance
         if self.enable_noise:
-            rand_p = nn.Parameter(torch.Tensor(G_crxb.shape),
-                                  requires_grad=False)
-            rand_g = nn.Parameter(torch.Tensor(G_crxb.shape),
-                                  requires_grad=False)
-            if self.device.type == "cuda":
-                rand_p = rand_p.cuda()
-                rand_g = rand_g.cuda()
+            # rand_p = nn.Parameter(torch.Tensor(G_crxb.shape),
+            #                       requires_grad=False)
+            # rand_g = nn.Parameter(torch.Tensor(G_crxb.shape),
+            #                       requires_grad=False)
+            # if self.device.type == "cuda":
+            #     rand_p = rand_p.cuda()
+            #     rand_g = rand_g.cuda()
+            # with torch.no_grad():
+            #     input_reduced = (input_crxb.norm(p=2, dim=0).norm(p=2, dim=3).unsqueeze(dim=3)) / \
+            #                     (input_crxb.shape[0] * input_crxb.shape[3])
+            #     grms = torch.sqrt(
+            #         G_crxb * self.freq * (4 * self.kb * self.temp + 2 * self.q * input_reduced) / (input_reduced ** 2) \
+            #         + (self.delta_g / 3) ** 2)
+            #
+            #     grms[torch.isnan(grms)] = 0
+            #     grms[grms.eq(float('inf'))] = 0
+            #
+            #     rand_p.uniform_()
+            #     rand_g.normal_(0, 1)
+            #     G_p = G_crxb * (self.b * G_crxb + self.a) / (G_crxb - (self.b * G_crxb + self.a))
+            #     G_p[rand_p.ge(self.tau)] = 0
+            #     G_g = grms * rand_g
+            # G_crxb += (G_g.cuda() + G_p)
+            # temp_var = torch.empty_like(G_crxb).normal_(0, noise_amp/3)
+            temp_var = torch.stack((torch.full_like(G_crxb[0], noise_amp),torch.full_like(G_crxb[1], -noise_amp)))
+            # temp_var = torch.stack((torch.full_like(G_crxb[0], 0.15),torch.full_like(G_crxb[1], -0.15)))
             with torch.no_grad():
-                input_reduced = (input_crxb.norm(p=2, dim=0).norm(p=2, dim=3).unsqueeze(dim=3)) / \
-                                (input_crxb.shape[0] * input_crxb.shape[3])
-                grms = torch.sqrt(
-                    G_crxb * self.freq * (4 * self.kb * self.temp + 2 * self.q * input_reduced) / (input_reduced ** 2) \
-                    + (self.delta_g / 3) ** 2)
-
-                grms[torch.isnan(grms)] = 0
-                grms[grms.eq(float('inf'))] = 0
-
-                rand_p.uniform_()
-                rand_g.normal_(0, 1)
-                G_p = G_crxb * (self.b * G_crxb + self.a) / (G_crxb - (self.b * G_crxb + self.a))
-                G_p[rand_p.ge(self.tau)] = 0
-                G_g = grms * rand_g
-            G_crxb += (G_g.cuda() + G_p)
-
+                G_crxb += G_crxb * temp_var
 
         # this block is to calculate the ir drop of the crossbar
         if self.ir_drop:
@@ -238,7 +247,10 @@ class crxb_Conv2d(nn.Conv2d):
         #         print('adc LSB ration:', self.delta_i/self.max_i_LSB)
         output_clip = F.hardtanh(output_crxb, min_val=-self.h_lvl_ia * self.delta_i.item(),
                                  max_val=self.h_lvl_ia * self.delta_i.item())
-        output_adc = adc(output_clip, self.delta_i, self.delta_y)
+        if self.delta_i == 0:
+            output_adc = output_clip
+        else:
+            output_adc = adc(output_clip, self.delta_i, self.delta_y)
 
         if self.w2g.enable_SAF:
             if self.enable_ec_SAF:
@@ -335,19 +347,19 @@ class crxb_Linear(nn.Linear):
 
         ################# Hardware conversion ##############################
         # weight and input levels
-        self.n_lvl_g = 2 ** weight_qbit
-        self.h_lvl_g = (self.n_lvl_g - 2)/2
+        self.n_lvl_v = 2 ** input_qbit
+        self.h_lvl_g = 2 ** (weight_qbit-1)
         # ReRAM cells
         self.Gmax = gmax  # max conductance
         self.Gmin = gmin  # min conductance
-        self.delta_g = (self.Gmax - self.Gmin) / (2 ** 7)  # conductance step
+        self.delta_g = (self.Gmax - self.Gmin) / self.h_lvl_g  # conductance step
         self.w2g = w2g(self.delta_g, Gmin=self.Gmin, G_SA0=self.Gmax,
                        G_SA1=self.Gmin, weight_shape=weight_crxb_shape, enable_SAF=enable_SAF)
         self.Gwire = gwire
         self.Gload = gload
         # DAC
         self.Vdd = vdd  # unit: volt
-        self.delta_v = self.Vdd / (self.n_lvl_g - 1)
+        self.delta_v = self.Vdd / (self.n_lvl_v - 1)
 
         ################ Stochastic Conductance Noise setup #########################
         # parameters setup
@@ -379,15 +391,20 @@ class crxb_Linear(nn.Linear):
 
         input_clip = F.hardtanh(input, min_val=-self.h_lvl_ma * self.delta_x.item(),
                                 max_val=self.h_lvl_ma * self.delta_x.item())
-        input_quan = quantize_input(
-            input_clip, self.delta_x) * self.delta_v  # convert to voltage
+        if self.delta_x == 0:
+            input_quan = input
+        else:
+            input_quan = quantize_input(input_clip, self.delta_x) * self.delta_v  # convert to voltage
 
-        weight_quan = quantize_weight(self.weight, self.delta_w)
+        if self.delta_w == 0:
+            self.weight_quan = self.weight
+        else:
+            self.weight_quan = quantize_weight(self.weight, self.delta_w)
 
         # 2. Perform the computation between input voltage and weight conductance
         # 2.1. skip the input unfold and weight flatten for fully-connected layers
         # 2.2. add padding
-        weight_padded = F.pad(weight_quan, self.w_pad,
+        weight_padded = F.pad(self.weight_quan, self.w_pad,
                               mode='constant', value=0)
         input_padded = F.pad(input_quan, self.input_pad,
                              mode='constant', value=0)
@@ -403,33 +420,37 @@ class crxb_Linear(nn.Linear):
         # 2.4. compute matrix multiplication
         # this block is for introducing stochastic noise into ReRAM conductance
         if self.enable_noise:
-            rand_p = nn.Parameter(torch.Tensor(G_crxb.shape),
-                                  requires_grad=False)
-            rand_g = nn.Parameter(torch.Tensor(G_crxb.shape),
-                                  requires_grad=False)
-
-            if self.device.type == "cuda":
-                rand_p = rand_p.cuda()
-                rand_g = rand_g.cuda()
-
+            # rand_p = nn.Parameter(torch.Tensor(G_crxb.shape),
+            #                       requires_grad=False)
+            # rand_g = nn.Parameter(torch.Tensor(G_crxb.shape),
+            #                       requires_grad=False)
+            #
+            # if self.device.type == "cuda":
+            #     rand_p = rand_p.cuda()
+            #     rand_g = rand_g.cuda()
+            #
+            # with torch.no_grad():
+            #     input_reduced = input_crxb.norm(p=2, dim=0).norm(p=2, dim=3).unsqueeze(dim=3) / (
+            #             input_crxb.shape[0] * input_crxb.shape[3])
+            #     grms = torch.sqrt(
+            #         G_crxb * self.freq * (4 * self.kb * self.temp + 2 * self.q * input_reduced) / (input_reduced ** 2) \
+            #         + (self.delta_g / 3 /128) ** 2)  # G_crxb / 3 / 128
+            #
+            #     grms[torch.isnan(grms)] = 0
+            #     grms[grms.eq(float('inf'))] = 0
+            #
+            #     rand_p.uniform_()
+            #     rand_g.normal_(0, 1)
+            #     G_p = G_crxb * (self.b * G_crxb + self.a) / (G_crxb - (self.b * G_crxb + self.a))
+            #     G_p[rand_p.ge(self.tau)] = 0
+            #     G_g = grms * rand_g
+            #
+            # G_crxb += (G_g + G_p)
+            # temp_var = torch.empty_like(G_crxb).normal_(0, noise_amp/3)
+            temp_var = torch.stack((torch.full_like(G_crxb[0], noise_amp), torch.full_like(G_crxb[1], -noise_amp)))
+            # temp_var = torch.stack((torch.full_like(G_crxb[0], 0.15),torch.full_like(G_crxb[1], -0.15)))
             with torch.no_grad():
-                input_reduced = input_crxb.norm(p=2, dim=0).norm(p=2, dim=3).unsqueeze(dim=3) / (
-                        input_crxb.shape[0] * input_crxb.shape[3])
-                grms = torch.sqrt(
-                    G_crxb * self.freq * (4 * self.kb * self.temp + 2 * self.q * input_reduced) / (input_reduced ** 2) \
-                    + (self.delta_g / 3 /128) ** 2)  # G_crxb / 3 / 128
-
-                grms[torch.isnan(grms)] = 0
-                grms[grms.eq(float('inf'))] = 0
-
-                rand_p.uniform_()
-                rand_g.normal_(0, 1)
-                G_p = G_crxb * (self.b * G_crxb + self.a) / (G_crxb - (self.b * G_crxb + self.a))
-                G_p[rand_p.ge(self.tau)] = 0
-                G_g = grms * rand_g
-
-            G_crxb += (G_g + G_p)
-
+                G_crxb += G_crxb * temp_var
 
         # this block is to calculate the ir drop of the crossbar
 
@@ -478,7 +499,10 @@ class crxb_Linear(nn.Linear):
         #         print('adc LSB ration:', self.delta_i/self.max_i_LSB)
         output_clip = F.hardtanh(output_crxb, min_val=-self.h_lvl_ia * self.delta_i.item(),
                                  max_val=self.h_lvl_ia * self.delta_i.item())
-        output_adc = adc(output_clip, self.delta_i, self.delta_y)
+        if self.delta_i == 0:
+            output_adc = output_crxb
+        else:
+            output_adc = adc(output_clip, self.delta_i, self.delta_y)
 
         if self.w2g.enable_SAF:
             if self.enable_ec_SAF:
