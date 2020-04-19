@@ -1,7 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="daf61362-6192-4995-85e7-885a059a2a96" name="Default Changelist" comment="" />
+    <list default="true" id="daf61362-6192-4995-85e7-885a059a2a96" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/module/learnable_quantize0.6.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/module/learnable_quantize0.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/module/lq_layer0.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/module/lq_layer0dot5.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/newton_method/hw6-project-newton.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/newton_method/hw6-project.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/newton_method/nbadata.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/reram_mnist2.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/reram_mnist_lq0.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/weight_statistics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/deployment.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/deployment.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/module/layer1.py" beforeDir="false" afterPath="$PROJECT_DIR$/module/layer1.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/module/layer1dot5.py" beforeDir="false" afterPath="$PROJECT_DIR$/module/layer1dot5.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/module/layer2.py" beforeDir="false" afterPath="$PROJECT_DIR$/module/layer2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/module/learnable_quantize.py" beforeDir="false" afterPath="$PROJECT_DIR$/module/learnable_quantize.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/module/learnable_quantize2.py" beforeDir="false" afterPath="$PROJECT_DIR$/module/learnable_quantize3.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/reram_mnist.py" beforeDir="false" afterPath="$PROJECT_DIR$/reram_mnist.py" afterDir="false" />
+    </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -15,10 +34,15 @@
       </list>
     </option>
   </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
   <component name="ProjectId" id="1ZVrQDXpkngCPzqGklJZmHKn7Jy" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="PropertiesComponent">
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/backup" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
     <property name="node.js.path.for.package.eslint" value="project" />
@@ -32,8 +56,11 @@
       <recent name="C:\Users\diyuf\Documents\科研\python\myproject" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="E:\Documents\科研\python\myproject\backup" />
+      <recent name="E:\Documents\科研\python\myproject\newton_method" />
+      <recent name="E:\Documents\科研\python\myproject\module" />
+      <recent name="E:\Documents\科研\python\myproject" />
       <recent name="C:\Users\diyuf\Documents\科研\python\myproject" />
-      <recent name="C:\Users\diyuf\Documents\科研\python\myproject\datasets" />
     </key>
   </component>
   <component name="RunDashboard">
@@ -48,6 +75,164 @@
       </list>
     </option>
   </component>
+  <component name="RunManager" selected="Python.learnable_quantize0dot5">
+    <configuration default="true" type="PyRemoteDebugConfigurationType" factoryName="Python Remote Debug">
+      <option name="PORT" value="12345" />
+      <option name="HOST" value="localhost" />
+      <PathMappingSettings>
+        <option name="pathMappings">
+          <list />
+        </option>
+      </PathMappingSettings>
+      <option name="REDIRECT_OUTPUT" value="true" />
+      <option name="SUSPEND_AFTER_CONNECT" value="true" />
+      <method v="2" />
+    </configuration>
+    <configuration name="gpu_point" type="PyRemoteDebugConfigurationType" factoryName="Python Remote Debug" editBeforeRun="true">
+      <module name="myproject" />
+      <option name="PORT" value="12346" />
+      <option name="HOST" value="0.0.0.0" />
+      <PathMappingSettings>
+        <option name="pathMappings">
+          <list>
+            <mapping local-root="$PROJECT_DIR$" remote-root="/root/gpu_point/python/myproject" />
+            <mapping local-root="E:/library/Miniconda3/envs/torch_new" remote-root=" /root/miniconda3/envs/torch_new" />
+            <mapping local-root="$PROJECT_DIR$/module" remote-root="/root/gpu_point/python/myproject/module" />
+          </list>
+        </option>
+      </PathMappingSettings>
+      <option name="REDIRECT_OUTPUT" value="true" />
+      <option name="SUSPEND_AFTER_CONNECT" value="true" />
+      <method v="2" />
+    </configuration>
+    <configuration name="learnable_quantize" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="myproject" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/module" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/module/learnable_quantize.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="learnable_quantize0" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="myproject" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/module" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/module/learnable_quantize0.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="learnable_quantize0.6" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="myproject" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/module" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/module/learnable_quantize0.6.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="learnable_quantize0dot5" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="myproject" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/module" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/module/learnable_quantize0dot5.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="learnable_quantize2" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="myproject" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/module" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="E:\Documents\科研\python\myproject\module\learnable_quantize0.6.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.learnable_quantize0" />
+      <item itemvalue="Python.learnable_quantize0dot5" />
+      <item itemvalue="Python.learnable_quantize2" />
+      <item itemvalue="Python.learnable_quantize" />
+      <item itemvalue="Python.learnable_quantize0.6" />
+      <item itemvalue="Python Remote Debug.gpu_point" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.learnable_quantize0dot5" />
+        <item itemvalue="Python.learnable_quantize0.6" />
+        <item itemvalue="Python.learnable_quantize2" />
+        <item itemvalue="Python.learnable_quantize" />
+        <item itemvalue="Python.learnable_quantize0" />
+      </list>
+    </recent_temporary>
+  </component>
   <component name="SvnConfiguration">
     <configuration />
   </component>
@@ -58,11 +243,166 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1584935083214</updated>
-      <workItem from="1584935085072" duration="11946000" />
+      <workItem from="1584935085072" duration="36833000" />
+      <workItem from="1585145763801" duration="10617000" />
+      <workItem from="1585186439726" duration="28756000" />
+      <workItem from="1585745171554" duration="9678000" />
+      <workItem from="1585789112211" duration="25786000" />
+      <workItem from="1585930846862" duration="2693000" />
+      <workItem from="1586138096921" duration="558000" />
+      <workItem from="1586256727053" duration="40938000" />
+      <workItem from="1586703312384" duration="113688000" />
+      <workItem from="1587174568176" duration="18214000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="COLUMN_ORDER" />
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/pytorch_mnist.py</url>
+          <line>30</line>
+          <option name="timeStamp" value="6" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <condition expression="torch.isnan(loss) or (epoch == 7 and batch_idx==904)" language="Python" />
+          <url>file://$PROJECT_DIR$/reram_mnist.py</url>
+          <line>93</line>
+          <option name="timeStamp" value="17" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <condition expression="torch.isnan(output_adc).any()" language="Python" />
+          <url>file://$PROJECT_DIR$/module/layer1.py</url>
+          <line>254</line>
+          <option name="timeStamp" value="24" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <condition expression="torch.isnan(output).any()" language="Python" />
+          <url>file://$PROJECT_DIR$/module/layer1.py</url>
+          <line>272</line>
+          <option name="timeStamp" value="25" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <condition expression="torch.isnan(weight_quan).any() or torch.isnan(input_quan).any()" language="Python" />
+          <url>file://$PROJECT_DIR$/module/layer1.py</url>
+          <line>406</line>
+          <option name="timeStamp" value="35" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <condition expression="torch.isnan(output_adc).any()" language="Python" />
+          <url>file://$PROJECT_DIR$/module/layer1.py</url>
+          <line>506</line>
+          <option name="timeStamp" value="37" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <condition expression="torch.isnan(output).any()" language="Python" />
+          <url>file://$PROJECT_DIR$/module/layer1.py</url>
+          <line>521</line>
+          <option name="timeStamp" value="38" />
+        </line-breakpoint>
+        <line-breakpoint type="python-line">
+          <url>file://E:/library/Miniconda3/envs/torch_new/Lib/site-packages/torch/tensor.py</url>
+          <line>166</line>
+          <option name="timeStamp" value="58" />
+        </line-breakpoint>
+        <line-breakpoint type="python-line">
+          <url>file://E:/library/Miniconda3/envs/torch_new/Lib/site-packages/torch/autograd/__init__.py</url>
+          <line>43</line>
+          <option name="timeStamp" value="59" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <condition expression="epoch==5 and batch_idx==170" language="Python" />
+          <url>file://$PROJECT_DIR$/reram_mnist1.5.py</url>
+          <line>89</line>
+          <option name="timeStamp" value="66" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/module/learnable_quantize0dot5.py</url>
+          <line>401</line>
+          <option name="timeStamp" value="77" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/module/learnable_quantize0.6.py</url>
+          <line>129</line>
+          <option name="timeStamp" value="82" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/module/learnable_quantize0.6.py</url>
+          <line>213</line>
+          <option name="timeStamp" value="83" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/newton_method/optim_utils.py</url>
+          <line>85</line>
+          <option name="timeStamp" value="87" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/newton_method/optim_utils.py</url>
+          <line>27</line>
+          <option name="timeStamp" value="88" />
+        </line-breakpoint>
+      </breakpoints>
+      <breakpoints-defaults>
+        <breakpoint type="python-line" />
+      </breakpoints-defaults>
+    </breakpoint-manager>
+    <watches-manager>
+      <configuration name="PyRemoteDebugConfigurationType">
+        <watch expression="self.delta_i" />
+        <watch expression="self.delta_in_sum" />
+        <watch expression="self.delta_out_sum" />
+        <watch expression="self.delta_v" />
+        <watch expression="self.delta_w" />
+        <watch expression="self.delta_x" />
+        <watch expression="self.delta_y" />
+        <watch expression="self.counter" />
+        <watch expression="model.fc2.weight._grad" />
+        <watch expression="model.fc1.weight.grad" language="Python" />
+        <watch expression="model.conv1.weight.grad" language="Python" />
+        <watch expression="model.conv2.weight.grad" language="Python" />
+        <watch expression="penalty" />
+      </configuration>
+      <configuration name="PythonConfigurationType">
+        <watch expression="self.delta_i" />
+        <watch expression="self.delta_in_sum" />
+        <watch expression="self.delta_out_sum" />
+        <watch expression="self.delta_v" />
+        <watch expression="self.delta_w" />
+        <watch expression="self.delta_x" />
+        <watch expression="self.delta_y" />
+        <watch expression="thrs_multiplier" />
+      </configuration>
+    </watches-manager>
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/myproject$visdom_test.coverage" NAME="visdom_test Coverage Results" MODIFIED="1585243429163" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/myproject$learnable_quantize0.coverage" NAME="learnable_quantize0 Coverage Results" MODIFIED="1587121710254" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/module" />
+    <SUITE FILE_PATH="coverage/myproject$weight_statistics.coverage" NAME="weight_statistics Coverage Results" MODIFIED="1586745637567" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/myproject$learnable_quantize3.coverage" NAME="learnable_quantize3 Coverage Results" MODIFIED="1586962963845" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/module" />
+    <SUITE FILE_PATH="coverage/myproject$learnable_quantize0dot5.coverage" NAME="learnable_quantize0dot5 Coverage Results" MODIFIED="1587205297808" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/module" />
+    <SUITE FILE_PATH="coverage/myproject$hw6_project_newton.coverage" NAME="hw6-project-newton Coverage Results" MODIFIED="1587089166658" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/newton_method" />
+    <SUITE FILE_PATH="coverage/myproject$reram_mnist1_5.coverage" NAME="reram_mnist1.5 Coverage Results" MODIFIED="1586616929695" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/myproject$hw6_project.coverage" NAME="hw6-project Coverage Results" MODIFIED="1587089188222" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/newton_method" />
+    <SUITE FILE_PATH="coverage/myproject$learnable_quantize0_6.coverage" NAME="learnable_quantize0.6 Coverage Results" MODIFIED="1587203674021" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/module" />
+    <SUITE FILE_PATH="coverage/myproject$layer1dot5.coverage" NAME="layer1dot5 Coverage Results" MODIFIED="1586489342354" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/module" />
+    <SUITE FILE_PATH="coverage/myproject$learnable_quantize.coverage" NAME="learnable_quantize Coverage Results" MODIFIED="1587194128320" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/module" />
+    <SUITE FILE_PATH="coverage/myproject$reram_mnist.coverage" NAME="reram_mnist Coverage Results" MODIFIED="1585153129833" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/myproject$learnable_quantize2.coverage" NAME="learnable_quantize2 Coverage Results" MODIFIED="1587202566457" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/module" />
   </component>
 </project>

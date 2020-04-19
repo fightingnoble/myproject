@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="ssh root@10.15.89.41 -p 22586">
+  <component name="PublishConfigData" autoUpload="Always" serverName="ssh root@10.15.89.41 -p 22586" showNewOnTargetInSync="false">
     <serverData>
       <paths name="ssh root@10.15.89.41 -p 22586">
         <serverdata>

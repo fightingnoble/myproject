@@ -17,6 +17,8 @@ from helper import accuracy, AverageMeter, save_checkpoint
 from module.layer1 import crxb_Conv2d, crxb_Linear
 # import pydevd_pycharm
 # pydevd_pycharm.settrace('0.0.0.0', port=12346, stdoutToServer=True, stderrToServer=True)
+import visdom
+vis = visdom.Visdom(env ="reram_mnist")
 
 
 class Net(nn.Module):
@@ -44,6 +46,34 @@ class Net(nn.Module):
         x = self.fc2(x)
         return F.log_softmax(x, dim=1)
 
+    def plot_histogram(self):
+        for i, layer in enumerate(self.children()):
+            if isinstance(layer, (crxb_Conv2d,crxb_Linear)):
+                data = layer.weight.data.view(-1)
+                vis.histogram(data, 'w%d'%i, opts=dict(title='w%d'%i))
+                data = layer.weight_quan.data.view(-1)*layer.delta_w
+                vis.histogram(data, 'wq%d'%i, opts=dict(title='wq%d'%i))
+
+    def plot_qcurve(self):
+        for i, layer in enumerate(self.children()):
+            if isinstance(layer, (crxb_Conv2d,crxb_Linear)):
+                # x = torch.arange(0.,1.,0.01).view(1,-1)
+                # x = torch.stack((x,-x))
+                # oc = layer.levels.shape[-1]
+                # x = x.expand(2,int(oc/2),-1).contiguous().to(layer.device)
+                # y = lq_weight.apply(x,layer.levels,layer.thrs, layer.weight_qbit)
+                x = layer.x.view(-1,1)
+                y = layer.y.view(-1,1)
+                vis.scatter(X=torch.cat([x,y],1),win='qcurve%d'%i, opts=dict(title='qcurve%d'%i))
+
+    def clip_w(self):
+        for i, layer in enumerate(self.children()):
+            if isinstance(layer, (crxb_Conv2d,crxb_Linear)):
+                if layer.weight.data.abs().max()>10 or layer.weight.grad.data.abs().max()>10:
+                    print('!!!!')
+                data = layer.weight.data.clamp_(-10,10)
+                grad = layer.weight.grad.data.clamp_(-5,5)
+
 # Define a Convolutional Neural Network
 
 # from torchvision.models.alexnet import AlexNet, alexnet, model_urls
@@ -70,6 +100,10 @@ def train(args, model, device, train_loader, optimizer, epoch):
                                                                            NUM_TRAIN,
                                                                            100. * (batch_idx + 1) / len(train_loader),
                                                                            loss.item()), end="\r")
+        with torch.no_grad():
+            model.clip_w()
+            model.plot_histogram()
+            # model.plot_qcurve()
     print('\n')
     return loss
 
@@ -239,7 +273,7 @@ def main():
     qbit_list = list(map(int, args.qbit.split(',')))
     crxb_cfg = {'ir_drop': args.ir_drop, 'device': device,
                 'gmax': args.gmax, 'gmin': args.gmin, 'gwire': args.gwire, 'gload': args.gload,
-                'input_qbit': qbit_list[0], 'weight_qbit': qbit_list[0], 'activation_qbit': qbit_list[0],
+                'input_qbit': qbit_list[0], 'weight_qbit': qbit_list[1], 'activation_qbit': qbit_list[2],
                 'vdd': args.vdd, 'enable_noise': args.enable_noise,
                 'freq': args.freq, 'temp': args.temp, 'crxb_size': args.crxb_size,
                 'enable_SAF': args.enable_SAF, 'enable_ec_SAF': args.enable_ec_SAF}
@@ -290,7 +324,30 @@ def main():
             checkpoint = torch.load(args.resume)
             args.start_epoch = checkpoint['epoch']
             best_prec1 = checkpoint['best_prec1']
-            net.load_state_dict(checkpoint['state_dict'])
+
+            # -------------2020/04/16------------
+            model_dict = net.state_dict()
+            pretrained_dict = checkpoint['state_dict']
+            # pretrained_dict = torch.load(args.resume,map_location=torch.device('cpu'))['state_dict']
+            print(model_dict.keys(),'\r\n')
+            print(pretrained_dict.keys(),'\r\n')
+            new_dict = {}
+            for k,v in model_dict.items():
+                # fit model saved in parallel model
+                if 'module.'+k in pretrained_dict:
+                    new_dict[k] = pretrained_dict['module.'+k]
+                    print(k,' ')
+                elif k in pretrained_dict:
+                    new_dict[k] = pretrained_dict[k]
+                    print(k,' ')
+                else:
+                    new_dict[k] = v
+                    print(k,'!!')
+            model_dict.update(new_dict)
+            net.load_state_dict(model_dict)
+            # -------------2020/04/16------------
+
+            # net.load_state_dict(checkpoint['state_dict'])
             if args.resume_optim:
                 try:
                     optimizer.load_state_dict(checkpoint['optimizer'])
@@ -348,3 +405,4 @@ if __name__ == '__main__':
 # format the physical parameter dict: crxb_cfg
 # add layer number flag: is_first_layer, is_last_layer
 # 2020/03/25: add layer number flag: is_first_layer, is_last_layer
+# 2020/04/16: improve the checkpoint loader
